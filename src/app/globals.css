@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* Tokens da Laminy. Decisões em DESIGN.md. */
+@theme {
+  --color-black: #050807;
+  --color-forest: #0c1f1a;
+  --color-emerald: #0f7b5a;
+  --color-signal: #19c27a;
+  --color-mint: #a7f0cd;
+  --color-mist: #f2f4f3;
+  --color-white: #ffffff;
+
+  /* Neutros derivados do forest. */
+  --color-muted: #4a5a55;
+  --color-line: #dde3e0;
+  --color-line-strong: #b9c4bf;
+  --color-hover: #f6f8f7;
+
+  /* Status: sempre acompanhados de texto. */
+  --color-ok: #0f7b5a;
+  --color-ok-bg: #e3f4ec;
+  --color-warn: #8a5a00;
+  --color-warn-bg: #fbf3e0;
+  --color-danger: #b42318;
+  --color-danger-bg: #fdecea;
+  --color-neutral: #4a5a55;
+  --color-neutral-bg: #e6ebe9;
+
+  --radius-card: 12px;
+}
+
+@theme inline {
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-mist font-sans text-[15px] leading-relaxed text-black antialiased;
+  }
+  h1 {
+    @apply text-[28px] leading-tight font-semibold tracking-[-0.03em];
+  }
+  h2 {
+    @apply text-lg leading-snug font-semibold tracking-[-0.03em];
+  }
+  a {
+    @apply text-emerald underline decoration-emerald/30 underline-offset-4 hover:decoration-emerald;
+  }
+  /* Foco duplo (forest + signal): visível sobre fundo claro e escuro. */
+  :focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-forest);
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  select,
+  textarea {
+    @apply min-h-10 w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-[15px] text-black placeholder:text-muted/70;
+  }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply border-forest;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-signal);
+  }
+  label {
+    @apply flex flex-col gap-1.5 text-sm font-medium;
+  }
+  summary {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  /* Tabelas: cabeçalho mono, linhas compactas, hover discreto. */
+  .tabela {
+    @apply w-full border-collapse text-sm;
+  }
+  .tabela th {
+    @apply border-b border-line px-4 py-2.5 text-left font-mono text-xs font-normal tracking-wide whitespace-nowrap text-muted uppercase;
+  }
+  .tabela td {
+    @apply border-b border-line px-4 py-2.5 align-middle;
+  }
+  .tabela tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .tabela tbody tr {
+    @apply transition-colors hover:bg-hover;
+  }
+
+  /* Marcador do mapa: ponto signal com halo. */
+  .marcador {
+    @apply block size-3.5 rounded-full border-2 border-white bg-signal;
+    box-shadow: 0 0 0 6px rgb(25 194 122 / 0.25);
+  }
+  .leaflet-container {
+    @apply font-sans;
+  }
+  .leaflet-popup-content a {
+    @apply text-emerald;
+  }
+  .leaflet-popup-content-wrapper {
+    @apply rounded-card;
+  }
+  .leaflet-popup-content {
+    @apply m-3.5 font-sans text-sm leading-normal;
+  }
+}
+
+/* Login: ondas lentas saindo do ponto da marca. Única animação do portal. */
+.login-onda {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: login-onda 7.2s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+@keyframes login-onda {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
