@@ -5,10 +5,11 @@ import { notFound } from "next/navigation";
 
 import { ActionForm } from "@/components/action-form";
 import { Confirmar } from "@/components/confirmar";
-import { Card, PageHeader, Secao, Status, botao } from "@/components/ui";
+import { Abas, Card, PageHeader, Secao, Status, ZonaPerigo, botao } from "@/components/ui";
 import { db } from "@/db";
 import { campanhas, leads } from "@/db/schema";
 import { requireSession } from "@/lib/session";
+import { param } from "@/lib/url";
 import { uuid } from "@/lib/validation";
 
 import { atualizarCampanha, excluirCampanha } from "../actions";
@@ -17,10 +18,11 @@ import { LeadsTable } from "../leads-table";
 
 export const metadata: Metadata = { title: "Campanha" };
 
-export default async function CampanhaPage({ params }: PageProps<"/campanhas/[id]">) {
+export default async function CampanhaPage({ params, searchParams }: PageProps<"/campanhas/[id]">) {
   await requireSession();
   const id = uuid.safeParse((await params).id);
   if (!id.success) notFound();
+  const configuracoes = param((await searchParams).aba) === "configuracoes";
 
   const campanha = await db.query.campanhas.findFirst({
     where: eq(campanhas.id, id.data),
@@ -28,6 +30,7 @@ export default async function CampanhaPage({ params }: PageProps<"/campanhas/[id
   });
   if (!campanha) notFound();
 
+  const base = `/campanhas/${campanha.id}`;
   const detalhes = [campanha.nicho, campanha.regiao].filter(Boolean).join(" · ");
 
   return (
@@ -36,42 +39,44 @@ export default async function CampanhaPage({ params }: PageProps<"/campanhas/[id
         titulo={campanha.nome}
         meta={<Status valor={campanha.status} />}
         descricao={campanha.descricao ?? (detalhes || undefined)}
-        voltar={{ href: "/campanhas", label: "Campanhas" }}
+        voltar={{ href: "/campanhas?aba=campanhas", label: "Campanhas" }}
       >
         <Link href={`/campanhas/leads/novo?campanha=${campanha.id}`} className={botao.primario}>
           + Novo lead
         </Link>
       </PageHeader>
 
-      <Secao titulo="Leads" semPadding>
-        <LeadsTable leads={campanha.leads} novoHref={`/campanhas/leads/novo?campanha=${campanha.id}`} />
-      </Secao>
+      <Abas
+        itens={[
+          { href: base, label: "Leads", ativo: !configuracoes, contagem: campanha.leads.length },
+          { href: `${base}?aba=configuracoes`, label: "Configurações", ativo: configuracoes },
+        ]}
+      />
 
-      <Card>
-        <details>
-          <summary className="flex min-h-12 items-center px-5 text-sm font-medium">Editar campanha</summary>
-          <div className="flex flex-col gap-6 border-t border-line p-5">
-            <ActionForm
-              action={atualizarCampanha.bind(null, campanha.id)}
-              submitLabel="Salvar campanha"
-              variante="secundario"
-            >
+      {configuracoes ? (
+        <>
+          <Secao titulo="Dados da campanha">
+            <ActionForm action={atualizarCampanha.bind(null, campanha.id)} submitLabel="Salvar campanha" variante="secundario">
               <CampanhaFields campanha={campanha} />
             </ActionForm>
-            <div className="flex flex-col gap-2 border-t border-line pt-5">
-              <p className="text-sm text-muted">Excluir a campanha mantém os leads, que ficam sem campanha.</p>
-              <div>
-                <Confirmar
-                  action={excluirCampanha.bind(null, campanha.id)}
-                  rotulo="Excluir campanha"
-                  pergunta="Excluir esta campanha?"
-                  confirmar="Excluir"
-                />
-              </div>
-            </div>
-          </div>
-        </details>
-      </Card>
+          </Secao>
+          <ZonaPerigo
+            titulo="Excluir campanha"
+            descricao="Os leads continuam cadastrados, mas ficam sem campanha. Não dá para desfazer."
+          >
+            <Confirmar
+              action={excluirCampanha.bind(null, campanha.id)}
+              rotulo="Excluir campanha"
+              pergunta="Excluir esta campanha?"
+              confirmar="Excluir"
+            />
+          </ZonaPerigo>
+        </>
+      ) : (
+        <Card className="overflow-hidden">
+          <LeadsTable leads={campanha.leads} novoHref={`/campanhas/leads/novo?campanha=${campanha.id}`} />
+        </Card>
+      )}
     </div>
   );
 }

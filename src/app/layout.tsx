@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { DM_Mono, Poppins } from "next/font/google";
+import { DM_Mono, Inter } from "next/font/google";
 
 import "./globals.css";
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
   display: "swap",
-  variable: "--font-poppins",
+  variable: "--font-inter",
 });
 
 const dmMono = DM_Mono({
@@ -29,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className={`${poppins.variable} ${dmMono.variable}`}>
+    <html lang="pt-BR" className={`${inter.variable} ${dmMono.variable}`}>
       <body>{children}</body>
     </html>
   );

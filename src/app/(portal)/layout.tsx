@@ -2,12 +2,13 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { auth, signOut } from "@/auth";
+import { IconeSair } from "@/components/icones";
 import { Sidebar } from "@/components/nav";
 
 async function Usuario() {
   await connection(); // ver requireSession()
   const session = await auth();
-  return <span className="truncate font-mono text-xs text-white/65">{session?.user?.email}</span>;
+  return <span className="min-w-0 truncate text-xs text-muted">{session?.user?.email}</span>;
 }
 
 export default function PortalLayout({ children }: LayoutProps<"/">) {
@@ -27,16 +28,18 @@ export default function PortalLayout({ children }: LayoutProps<"/">) {
             <form action={sair}>
               <button
                 type="submit"
-                className="inline-flex min-h-10 cursor-pointer items-center rounded-full border border-white/25 px-4 text-sm font-medium text-white transition-colors hover:border-white/60"
+                aria-label="Sair"
+                title="Sair"
+                className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-mist hover:text-black"
               >
-                Sair
+                <IconeSair />
               </button>
             </form>
           </>
         }
       />
-      <main className="px-4 py-8 sm:px-8 lg:ml-60 lg:px-10 lg:py-10">
-        <div className="mx-auto w-full max-w-6xl">{children}</div>
+      <main className="px-4 py-6 sm:px-8 lg:ml-60 lg:px-12 lg:py-10">
+        <div className="mx-auto w-full max-w-[1120px]">{children}</div>
       </main>
     </div>
   );

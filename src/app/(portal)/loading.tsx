@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <p role="status" className="font-mono text-xs tracking-wide text-muted uppercase">
+    <p role="status" className="text-sm text-muted">
       Carregando…
     </p>
   );

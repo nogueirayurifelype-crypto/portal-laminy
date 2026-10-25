@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, startTransition, type ReactNode } from "react";
 
 import type { ActionState } from "@/lib/validation";
@@ -13,6 +15,10 @@ type Props = {
   variante?: VarianteBotao;
   /** Limpa os campos após sucesso (ex.: formulários de "adicionar"). */
   resetOnSuccess?: boolean;
+  /** Para onde ir após sucesso (ex.: fechar o painel lateral). */
+  aoConcluir?: string;
+  /** Mostra "Cancelar" ao lado do envio. */
+  cancelarHref?: string;
   className?: string;
   children: ReactNode;
 };
@@ -26,15 +32,20 @@ export function ActionForm({
   submitLabel,
   variante = "primario",
   resetOnSuccess,
+  aoConcluir,
+  cancelarHref,
   className,
   children,
 }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const ref = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    if (state.ok && resetOnSuccess) ref.current?.reset();
-  }, [state, resetOnSuccess]);
+    if (!state.ok) return;
+    if (resetOnSuccess) ref.current?.reset();
+    if (aoConcluir) router.replace(aoConcluir, { scroll: false });
+  }, [state, resetOnSuccess, aoConcluir, router]);
 
   return (
     <form
@@ -52,10 +63,15 @@ export function ActionForm({
           {state.error}
         </p>
       )}
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
         <button type="submit" disabled={pending} className={botao[variante]}>
           {pending ? "Salvando…" : submitLabel}
         </button>
+        {cancelarHref && (
+          <Link href={cancelarHref} scroll={false} replace className={botao.secundario}>
+            Cancelar
+          </Link>
+        )}
       </div>
     </form>
   );

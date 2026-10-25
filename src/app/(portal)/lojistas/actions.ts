@@ -117,6 +117,26 @@ export async function adicionarResponsavel(
   return { ok: true };
 }
 
+export async function atualizarResponsavel(
+  lojistaId: string,
+  responsavelId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireSession();
+  const lid = uuid.parse(lojistaId);
+  const rid = uuid.parse(responsavelId);
+  const parsed = responsavelSchema.safeParse(fromFormData(formData));
+  if (!parsed.success) return erroDeValidacao(parsed.error);
+
+  await db
+    .update(responsaveis)
+    .set(parsed.data)
+    .where(and(eq(responsaveis.id, rid), eq(responsaveis.lojistaId, lid)));
+  revalidatePath(`/lojistas/${lid}`);
+  return { ok: true };
+}
+
 export async function removerResponsavel(lojistaId: string, responsavelId: string) {
   await requireSession();
   const lid = uuid.parse(lojistaId);

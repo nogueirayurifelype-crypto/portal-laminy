@@ -72,3 +72,31 @@ export function competenciaAnterior(competencia: string): string {
   const [a, m] = competencia.split("-").map(Number);
   return m === 1 ? `${a - 1}-12-01` : `${a}-${String(m - 1).padStart(2, "0")}-01`;
 }
+
+/** "2026-12-01" -> "2027-01-01" */
+export function competenciaSeguinte(competencia: string): string {
+  const [a, m] = competencia.split("-").map(Number);
+  return m === 12 ? `${a + 1}-01-01` : `${a}-${String(m + 1).padStart(2, "0")}-01`;
+}
+
+/** "2026-10-01" -> "Outubro de 2026" */
+export function formatMesExtenso(competencia: string): string {
+  const [a, m] = competencia.split("-").map(Number);
+  const texto = new Date(Date.UTC(a, m - 1, 1)).toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/** Data de hoje em São Paulo, para input type="date" ("2026-10-25"). */
+export function hojeISO(agora = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(agora);
+}
+
+/** Só o dia de um instante, no fuso de São Paulo ("25/10/2026"). */
+export function formatDia(valor: Date | null | undefined): string {
+  if (!valor) return "—";
+  return valor.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}

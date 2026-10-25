@@ -8,7 +8,7 @@ import type { PontoLojista } from "./types";
 const LeafletMap = dynamic(() => import("./leaflet-map"), {
   ssr: false,
   loading: () => (
-    <p role="status" className="flex h-[70vh] min-h-80 items-center justify-center font-mono text-xs text-muted uppercase">
+    <p role="status" className="flex h-full min-h-80 items-center justify-center text-sm text-muted">
       Carregando mapa…
     </p>
   ),

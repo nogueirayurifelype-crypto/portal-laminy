@@ -73,15 +73,20 @@ export function Select({
 }
 
 export function Grid({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;
+  // Colunas pela largura do contêiner: funciona igual na página e no painel lateral.
+  return (
+    <div className="@container">
+      <div className="grid grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-3">{children}</div>
+    </div>
+  );
 }
 
 export function Dados({ itens }: { itens: [string, ReactNode][] }) {
   return (
-    <dl className="grid grid-cols-1 gap-x-8 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+    <dl className="grid grid-cols-1 gap-x-8 gap-y-5 text-sm sm:grid-cols-2 lg:grid-cols-3">
       {itens.map(([k, v]) => (
         <div key={k} className="flex min-w-0 flex-col gap-1">
-          <dt className="font-mono text-xs tracking-wide text-muted uppercase">{k}</dt>
+          <dt className="text-xs font-medium text-muted">{k}</dt>
           <dd className="break-words">{v ?? "—"}</dd>
         </div>
       ))}

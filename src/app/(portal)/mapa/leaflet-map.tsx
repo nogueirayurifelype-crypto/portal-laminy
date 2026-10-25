@@ -30,7 +30,7 @@ export default function LeafletMap({ pontos }: { pontos: PontoLojista[] }) {
     <MapContainer
       {...(bounds ? { bounds, boundsOptions: { padding: [40, 40], maxZoom: 14 } } : { center: CENTRO_BRASIL, zoom: 4 })}
       scrollWheelZoom
-      className="h-[70vh] min-h-80 w-full"
+      className="h-full min-h-80 w-full"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

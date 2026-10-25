@@ -109,54 +109,74 @@ const pagamentoSchema = z.object({
   pagoEm: dataOpcional,
 });
 
+/**
+ * Registra um pagamento. O lojista vem da conta; na ficha do lojista,
+ * `lojistaId` garante que a conta é dele.
+ */
 export async function registrarPagamento(
-  lojistaId: string,
+  lojistaId: string | null,
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   await requireSession();
-  const lid = uuid.parse(lojistaId);
+  const lid = lojistaId === null ? null : uuid.parse(lojistaId);
   const parsed = pagamentoSchema.safeParse(fromFormData(formData));
   if (!parsed.success) return erroDeValidacao(parsed.error);
   const { pagoEm, ...dados } = parsed.data;
 
-  // A conta precisa ser deste lojista.
   const conta = await db.query.contasFinanceiras.findFirst({
-    where: and(eq(contasFinanceiras.id, dados.contaId), eq(contasFinanceiras.lojistaId, lid)),
-    columns: { id: true },
+    where: eq(contasFinanceiras.id, dados.contaId),
+    columns: { lojistaId: true },
   });
-  if (!conta) return { error: "Conta não pertence a este lojista." };
+  if (!conta) return { error: "Conta não encontrada." };
+  if (lid !== null && conta.lojistaId !== lid) return { error: "Conta não pertence a este lojista." };
 
   await db.insert(pagamentos).values({
     ...dados,
-    lojistaId: lid,
+    lojistaId: conta.lojistaId,
     pagoEm: dados.status === "pago" ? (pagoEm ? dataParaInstante(pagoEm) : new Date()) : null,
   });
-  revalidar(lid);
+  revalidar(conta.lojistaId);
   return { ok: true };
 }
 
-export async function marcarComoPago(lojistaId: string, pagamentoId: string, formData: FormData) {
-  await requireSession();
-  const lid = uuid.parse(lojistaId);
-  const pid = uuid.parse(pagamentoId);
-  const forma = z.enum(PAGAMENTO_FORMA).nullable().catch(null).parse(formData.get("forma") || null);
+const baixaSchema = z.object({
+  forma: z.enum(PAGAMENTO_FORMA, { error: "Escolha a forma de pagamento" }),
+  pagoEm: dataOpcional,
+});
 
-  await db
+export async function marcarComoPago(
+  pagamentoId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireSession();
+  const pid = uuid.parse(pagamentoId);
+  const parsed = baixaSchema.safeParse(fromFormData(formData));
+  if (!parsed.success) return erroDeValidacao(parsed.error);
+
+  const [atualizado] = await db
     .update(pagamentos)
-    .set({ status: "pago", pagoEm: new Date(), ...(forma ? { forma } : {}) })
-    .where(and(eq(pagamentos.id, pid), eq(pagamentos.lojistaId, lid), ne(pagamentos.status, "pago")));
-  revalidar(lid);
+    .set({
+      status: "pago",
+      forma: parsed.data.forma,
+      pagoEm: parsed.data.pagoEm ? dataParaInstante(parsed.data.pagoEm) : new Date(),
+    })
+    .where(and(eq(pagamentos.id, pid), ne(pagamentos.status, "pago")))
+    .returning({ lojistaId: pagamentos.lojistaId });
+  if (!atualizado) return { error: "Pagamento não encontrado ou já pago." };
+  revalidar(atualizado.lojistaId);
+  return { ok: true };
 }
 
-export async function marcarComoAtrasado(lojistaId: string, pagamentoId: string) {
+export async function marcarComoAtrasado(pagamentoId: string) {
   await requireSession();
-  const lid = uuid.parse(lojistaId);
   const pid = uuid.parse(pagamentoId);
 
-  await db
+  const [atualizado] = await db
     .update(pagamentos)
     .set({ status: "atrasado" })
-    .where(and(eq(pagamentos.id, pid), eq(pagamentos.lojistaId, lid), eq(pagamentos.status, "pendente")));
-  revalidar(lid);
+    .where(and(eq(pagamentos.id, pid), eq(pagamentos.status, "pendente")))
+    .returning({ lojistaId: pagamentos.lojistaId });
+  if (atualizado) revalidar(atualizado.lojistaId);
 }
