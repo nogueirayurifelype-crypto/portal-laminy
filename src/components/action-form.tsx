@@ -54,6 +54,9 @@ export function ActionForm({
       onSubmit={(e) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        // O botão "criar mesmo assim" manda seu name/value junto (o FormData não inclui o botão).
+        const enviou = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+        if (enviou?.name) formData.set(enviou.name, enviou.value);
         startTransition(() => formAction(formData));
       }}
     >
@@ -63,10 +66,25 @@ export function ActionForm({
           {state.error}
         </p>
       )}
+      {state.aviso && (
+        <p role="alert" className="rounded-lg bg-warn-bg px-3 py-2 text-sm text-warn">
+          {state.aviso.texto}{" "}
+          {state.aviso.link && (
+            <Link href={state.aviso.link.href} className="font-medium underline">
+              {state.aviso.link.rotulo}
+            </Link>
+          )}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <button type="submit" disabled={pending} className={botao[variante]}>
           {pending ? "Salvando…" : submitLabel}
         </button>
+        {state.aviso?.podeProsseguir && (
+          <button type="submit" name="confirmarDuplicado" value="1" disabled={pending} className={botao.secundario}>
+            Salvar mesmo assim
+          </button>
+        )}
         {cancelarHref && (
           <Link href={cancelarHref} scroll={false} replace className={botao.secundario}>
             Cancelar

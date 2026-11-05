@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 
 import { Status } from "@/components/ui";
@@ -23,11 +24,24 @@ const marcador = L.divIcon({
 const CENTRO_BRASIL: [number, number] = [-14.235, -51.925];
 
 export default function LeafletMap({ pontos }: { pontos: PontoLojista[] }) {
+  // O Leaflet destrói o mapa no cleanup do efeito. Ao navegar entre páginas, o React pode
+  // esconder a tela e reexecutar os efeitos depois (Activity/StrictMode), e as camadas
+  // tentariam se anexar a um mapa já destruído ("reading 'appendChild'"). Por isso o mapa
+  // só existe entre o efeito e o cleanup, e ganha uma `key` nova a cada montagem.
+  const [montagem, setMontagem] = useState<number | null>(null);
+  useEffect(() => {
+    setMontagem((n) => (n ?? 0) + 1);
+    return () => setMontagem(null);
+  }, []);
+
   const bounds =
     pontos.length > 0 ? L.latLngBounds(pontos.map((p) => [p.latitude, p.longitude])) : undefined;
 
+  if (montagem === null) return null;
+
   return (
     <MapContainer
+      key={montagem}
       {...(bounds ? { bounds, boundsOptions: { padding: [40, 40], maxZoom: 14 } } : { center: CENTRO_BRASIL, zoom: 4 })}
       scrollWheelZoom
       className="h-full min-h-80 w-full"

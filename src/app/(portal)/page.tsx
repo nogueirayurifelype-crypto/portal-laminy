@@ -131,7 +131,7 @@ export default async function DashboardPage() {
               </Grupo>
             )}
             {qualificados.length > 0 && (
-              <Grupo titulo="Leads esperando aprovação" verTodos="/campanhas?status=qualificado">
+              <Grupo titulo="Leads esperando aprovação" verTodos="/campanhas?aba=leads&status=qualificado">
                 {qualificados.map((l) => (
                   <Linha
                     key={l.id}

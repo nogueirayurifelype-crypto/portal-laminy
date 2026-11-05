@@ -1,4 +1,5 @@
 import { Field, Grid, Select, TextArea } from "@/components/fields";
+import { EnderecoFields } from "@/components/endereco-fields";
 import { Grupo, Status } from "@/components/ui";
 import type { Lead } from "@/db/schema";
 
@@ -19,12 +20,25 @@ export function LeadFields({
       <Grupo titulo="Contato">
         <Grid>
           <Field name="nome" label="Nome do contato" required defaultValue={lead?.nome} />
-          <Field name="empresa" label="Empresa" defaultValue={lead?.empresa} />
-          <Field name="telefone" label="Telefone" type="tel" defaultValue={lead?.telefone} />
-          <Field name="email" label="E-mail" type="email" defaultValue={lead?.email} />
-          <Field name="cidade" label="Cidade" defaultValue={lead?.cidade} />
+          <Field name="empresa" label="Nome fantasia" defaultValue={lead?.empresa} />
+          <Field name="razaoSocial" label="Razão social" defaultValue={lead?.razaoSocial} />
+          <Field name="cnpj" label="CNPJ" inputMode="numeric" defaultValue={lead?.cnpj} />
           <Field name="nicho" label="Nicho" defaultValue={lead?.nicho} />
+          <Field name="telefone" label="Telefone" type="tel" defaultValue={lead?.telefone} />
+          <Field name="whatsapp" label="WhatsApp" type="tel" defaultValue={lead?.whatsapp} />
+          <Field name="email" label="E-mail" type="email" defaultValue={lead?.email} />
         </Grid>
+      </Grupo>
+      <Grupo titulo="Site e redes sociais">
+        <Grid>
+          <Field name="site" label="Site" placeholder="https://" defaultValue={lead?.site} />
+          <Field name="instagram" label="Instagram" placeholder="@usuario ou link" defaultValue={lead?.instagram} />
+          <Field name="facebook" label="Facebook" placeholder="link da página" defaultValue={lead?.facebook} />
+          <Field name="tiktok" label="TikTok" placeholder="@usuario ou link" defaultValue={lead?.tiktok} />
+        </Grid>
+      </Grupo>
+      <Grupo titulo="Endereço">
+        <EnderecoFields valor={lead} />
       </Grupo>
       <Grupo titulo="Prospecção">
         <Grid>

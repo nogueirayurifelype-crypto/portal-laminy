@@ -79,7 +79,12 @@ export const uuid = z.uuid("Identificador inválido");
 export const enumDe = <T extends readonly [string, ...string[]]>(valores: T, campo: string) =>
   z.enum(valores, { error: `${campo} inválido` });
 
-export type ActionState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string> };
+/**
+ * `aviso`: algo que o usuário deve saber antes de seguir (ex.: CNPJ já cadastrado).
+ * Com `podeProsseguir`, o formulário oferece um segundo botão que reenvia com `confirmarDuplicado=1`.
+ */
+export type AvisoForm = { texto: string; link?: { href: string; rotulo: string }; podeProsseguir?: boolean };
+export type ActionState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string>; aviso?: AvisoForm };
 
 export function fromFormData(formData: FormData): Record<string, string> {
   const obj: Record<string, string> = {};

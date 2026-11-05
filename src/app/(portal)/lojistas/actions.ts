@@ -1,12 +1,13 @@
 "use server";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/db";
 import { LOJISTA_STATUS, lojistas, responsaveis } from "@/db/schema";
+import { type ImportState, type LinhaPrevia, lerPlanilha, statusDaPlanilha } from "@/lib/planilha";
 import { requireSession } from "@/lib/session";
 import {
   type ActionState,
@@ -22,6 +23,8 @@ import {
   uuid,
 } from "@/lib/validation";
 
+import { COLUNAS_LOJISTA } from "./planilha";
+
 const lojistaSchema = z.object({
   nome: textoObrigatorio("Nome"),
   razaoSocial: textoOpcional,
@@ -29,6 +32,10 @@ const lojistaSchema = z.object({
   email: emailOpcional,
   telefone: textoOpcional,
   whatsapp: textoOpcional,
+  site: textoOpcional,
+  instagram: textoOpcional,
+  facebook: textoOpcional,
+  tiktok: textoOpcional,
   cep: digitosOpcional("CEP", 8),
   logradouro: textoOpcional,
   numero: textoOpcional,
@@ -49,10 +56,29 @@ function erroDeBanco(e: unknown): ActionState {
   throw e;
 }
 
+/** CNPJ é único entre lojistas: avisa qual já o usa (com link) em vez de só falhar. */
+async function avisoCnpjLojista(cnpj: string | null, ignorarId?: string): Promise<ActionState | null> {
+  if (!cnpj) return null;
+  const [outro] = await db
+    .select({ id: lojistas.id, nome: lojistas.nome })
+    .from(lojistas)
+    .where(ignorarId ? and(eq(lojistas.cnpj, cnpj), ne(lojistas.id, ignorarId)) : eq(lojistas.cnpj, cnpj))
+    .limit(1);
+  if (!outro) return null;
+  return {
+    aviso: {
+      texto: `Já existe um lojista com este CNPJ: ${outro.nome}. Cada CNPJ só pode ter um lojista; confira se não é o mesmo cadastro.`,
+      link: { href: `/lojistas/${outro.id}`, rotulo: "Abrir lojista →" },
+    },
+  };
+}
+
 export async function criarLojista(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireSession();
   const parsed = lojistaSchema.safeParse(fromFormData(formData));
   if (!parsed.success) return erroDeValidacao(parsed.error);
+  const existente = await avisoCnpjLojista(parsed.data.cnpj);
+  if (existente) return existente;
 
   let id: string;
   try {
@@ -73,6 +99,8 @@ export async function atualizarLojista(
   const lojistaId = uuid.parse(id);
   const parsed = lojistaSchema.safeParse(fromFormData(formData));
   if (!parsed.success) return erroDeValidacao(parsed.error);
+  const existente = await avisoCnpjLojista(parsed.data.cnpj, lojistaId);
+  if (existente) return existente;
 
   try {
     await db.update(lojistas).set(parsed.data).where(eq(lojistas.id, lojistaId));
@@ -182,4 +210,69 @@ export async function tornarPrincipal(lojistaId: string, responsavelId: string) 
   });
 
   revalidatePath(`/lojistas/${lid}`);
+}
+
+/**
+ * Importa lojistas de um CSV. `etapa=previa` só valida e devolve a prévia;
+ * `etapa=importar` grava as linhas válidas. CNPJ já cadastrado ou repetido é ignorado.
+ */
+export async function importarLojistas(_prev: ImportState, formData: FormData): Promise<ImportState> {
+  await requireSession();
+  const lida = await lerPlanilha(formData, COLUNAS_LOJISTA);
+  if ("error" in lida) return { error: lida.error };
+
+  const cadastrados = new Set(
+    (await db.select({ cnpj: lojistas.cnpj }).from(lojistas).where(isNotNull(lojistas.cnpj))).map((r) => r.cnpj),
+  );
+  const naPlanilha = new Set<string>();
+  const linhas: LinhaPrevia[] = [];
+  const novos: z.infer<typeof lojistaSchema>[] = [];
+
+  for (const { linha, dados } of lida.registros) {
+    const base = {
+      linha,
+      nome: dados.nome || "(sem nome)",
+      detalhe: [dados.cnpj, [dados.cidade, dados.uf].filter(Boolean).join("/")].filter(Boolean).join(" · "),
+    };
+    const parsed = lojistaSchema.safeParse({
+      ...dados,
+      status: statusDaPlanilha(dados.status, LOJISTA_STATUS, "em_contrato"),
+    });
+    if (!parsed.success) {
+      linhas.push({ ...base, situacao: "erro", motivo: erroDeValidacao(parsed.error).error });
+      continue;
+    }
+    const { cnpj } = parsed.data;
+    if (cnpj && (cadastrados.has(cnpj) || naPlanilha.has(cnpj))) {
+      const motivo = cadastrados.has(cnpj) ? "Já existe lojista com este CNPJ" : "CNPJ repetido na planilha";
+      linhas.push({ ...base, situacao: "duplicado", motivo });
+      continue;
+    }
+    if (cnpj) naPlanilha.add(cnpj);
+    novos.push(parsed.data);
+    linhas.push({ ...base, situacao: "ok" });
+  }
+
+  const previa = { linhas, reconhecidas: lida.reconhecidas, ignoradas: lida.ignoradas };
+  if (formData.get("etapa") !== "importar") return { previa };
+  if (novos.length === 0) return { previa, error: "Nenhuma linha válida para importar." };
+
+  const importados = await db.transaction(async (tx) => {
+    let total = 0;
+    for (let i = 0; i < novos.length; i += 500) {
+      // Outro cadastro com o mesmo CNPJ pode ter entrado desde a prévia: ignora em vez de falhar.
+      const inseridos = await tx
+        .insert(lojistas)
+        .values(novos.slice(i, i + 500))
+        .onConflictDoNothing()
+        .returning({ id: lojistas.id });
+      total += inseridos.length;
+    }
+    return total;
+  });
+
+  revalidatePath("/lojistas");
+  revalidatePath("/mapa");
+  revalidatePath("/");
+  return { importados };
 }

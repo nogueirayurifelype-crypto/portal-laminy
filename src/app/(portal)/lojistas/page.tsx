@@ -1,51 +1,24 @@
-import { and, asc, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { FiltroSelect } from "@/components/filtro-select";
 import { IconeFechar } from "@/components/icones";
 import { BarraBusca, Card, Num, PageHeader, Status, Tabela, Vazio, botao } from "@/components/ui";
+import { MenuPlanilha } from "@/components/menu-planilha";
 import { db } from "@/db";
 import { LOJISTA_STATUS, lojistas } from "@/db/schema";
 import { label } from "@/lib/format";
 import { requireSession } from "@/lib/session";
-import { hrefCom, param } from "@/lib/url";
+import { hrefCom } from "@/lib/url";
 
-const ORDENS = {
-  recentes: { label: "Mais recentes", por: desc(lojistas.createdAt) },
-  atualizados: { label: "Atualizados recentemente", por: desc(lojistas.updatedAt) },
-  nome: { label: "Nome (A–Z)", por: asc(lojistas.nome) },
-} as const;
+import { ORDENS, filtrosLojistas } from "./filtros";
 
 export const metadata: Metadata = { title: "Lojistas" };
 
 export default async function LojistasPage({ searchParams }: PageProps<"/lojistas">) {
   await requireSession();
-  const sp = await searchParams;
-  const busca = param(sp.q)?.trim() ?? "";
-  const status = LOJISTA_STATUS.find((s) => s === param(sp.status));
-  const ordem = Object.hasOwn(ORDENS, param(sp.ordem) ?? "") ? (param(sp.ordem) as keyof typeof ORDENS) : "recentes";
-  // Vindo do Mapa: só quem ainda não tem latitude/longitude.
-  const semCoordenadas = param(sp.coordenadas) === "sem";
-
-  const termo = `%${busca.replace(/[%_\\]/g, "\\$&")}%`;
-  const digitos = busca.replace(/\D/g, "");
-  const filtroBusca = busca
-    ? or(
-        ilike(lojistas.nome, termo),
-        ilike(lojistas.razaoSocial, termo),
-        ilike(lojistas.email, termo),
-        ilike(lojistas.cidade, termo),
-        ilike(lojistas.nicho, termo),
-        digitos ? ilike(lojistas.cnpj, `%${digitos}%`) : undefined,
-      )
-    : undefined;
-  const filtro = and(
-    filtroBusca,
-    status ? eq(lojistas.status, status) : undefined,
-    semCoordenadas ? or(isNull(lojistas.latitude), isNull(lojistas.longitude)) : undefined,
-  );
-  const filtrando = Boolean(busca || status || semCoordenadas);
+  const { busca, status, ordem, semCoordenadas, filtrando, where, orderBy } = filtrosLojistas(await searchParams);
+  const filtrosAtuais = { q: busca, status, ordem: ordem === "recentes" ? null : ordem, coordenadas: semCoordenadas ? "sem" : null };
 
   const lista = await db
     .select({
@@ -58,13 +31,15 @@ export default async function LojistasPage({ searchParams }: PageProps<"/lojista
       status: lojistas.status,
     })
     .from(lojistas)
-    .where(filtro)
-    .orderBy(ORDENS[ordem].por)
+    .where(where)
+    .orderBy(orderBy)
     .limit(200);
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeader titulo="Lojistas" descricao="Clientes da Laminy, com contato, endereço e status.">
+        {/* Exportar respeita os filtros atuais. */}
+        <MenuPlanilha importarHref="/lojistas/importar" exportarHref={hrefCom("/lojistas/exportar", filtrosAtuais)} />
         <Link href="/lojistas/novo" className={botao.primario}>
           + Novo lojista
         </Link>

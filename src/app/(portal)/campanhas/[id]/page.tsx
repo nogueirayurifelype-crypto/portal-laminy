@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 
 import { ActionForm } from "@/components/action-form";
 import { Confirmar } from "@/components/confirmar";
-import { Abas, Card, PageHeader, Secao, Status, ZonaPerigo, botao } from "@/components/ui";
+import { Abas, Card, PageHeader, Secao, ZonaPerigo, botao } from "@/components/ui";
+import { MenuPlanilha } from "@/components/menu-planilha";
 import { db } from "@/db";
 import { campanhas, leads } from "@/db/schema";
 import { requireSession } from "@/lib/session";
@@ -15,6 +16,7 @@ import { uuid } from "@/lib/validation";
 import { atualizarCampanha, excluirCampanha } from "../actions";
 import { CampanhaFields } from "../campanha-fields";
 import { LeadsTable } from "../leads-table";
+import { StatusCampanhaSelect } from "../status-campanha-select";
 
 export const metadata: Metadata = { title: "Campanha" };
 
@@ -37,10 +39,17 @@ export default async function CampanhaPage({ params, searchParams }: PageProps<"
     <div className="flex flex-col gap-8">
       <PageHeader
         titulo={campanha.nome}
-        meta={<Status valor={campanha.status} />}
+        meta={<StatusCampanhaSelect id={campanha.id} nome={campanha.nome} status={campanha.status} />}
         descricao={campanha.descricao ?? (detalhes || undefined)}
-        voltar={{ href: "/campanhas?aba=campanhas", label: "Campanhas" }}
+        voltar={{ href: "/campanhas", label: "Campanhas" }}
       >
+        <MenuPlanilha
+          importarHref={`/campanhas/leads/importar?campanha=${campanha.id}`}
+          exportarHref={`/campanhas/leads/exportar?campanha=${campanha.id}`}
+        />
+        <Link href={`${base}?aba=configuracoes`} className={botao.secundario}>
+          Editar campanha
+        </Link>
         <Link href={`/campanhas/leads/novo?campanha=${campanha.id}`} className={botao.primario}>
           + Novo lead
         </Link>

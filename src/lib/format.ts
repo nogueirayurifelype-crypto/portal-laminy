@@ -60,6 +60,9 @@ export const STATUS_LABEL: Record<string, string> = {
   aprovado: "Aprovado",
   descartado: "Descartado",
   principal: "Principal",
+  pronta: "Pronta",
+  duplicado: "Duplicada",
+  erro: "Com erro",
 };
 
 export function label(valor: string | null | undefined): string {

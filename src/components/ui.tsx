@@ -19,32 +19,38 @@ export const botao = {
 export type VarianteBotao = keyof typeof botao;
 
 /**
- * Wordmark "laminy" em traço arredondado: ponto do l e perna do y em signal.
+ * Wordmark oficial "laminy" (geometria da logo padrão): ponto do l e perna do y em signal.
  * O resto usa currentColor; `className` define altura e cor (ex.: "h-6 text-white").
  */
 export function Wordmark({ className = "h-6 text-white" }: { className?: string }) {
   return (
     <svg
-      viewBox="0 -2 212 86"
+      viewBox="150 90 1620 610"
       role="img"
       aria-label="Laminy"
       className={`w-auto shrink-0 ${className}`}
       fill="none"
-      strokeWidth={7}
-      strokeLinecap="round"
+      strokeWidth={64}
+      strokeLinecap="butt"
       strokeLinejoin="round"
     >
       <g stroke="currentColor">
-        <path d="M8 3v42q0 12 12 12" />
-        <circle cx="52" cy="40" r="17" />
-        <path d="M69 23v34" />
-        <path d="M83 57V36a13 13 0 0 1 26 0v21M109 36a13 13 0 0 1 26 0v21" />
-        <path d="M149 26v31" />
-        <path d="M163 57V36a13 13 0 0 1 26 0v4" />
+        {/* l */}
+        <path d="M192 100V360A100 100 0 0 0 292 460H322" />
+        {/* a */}
+        <circle cx="520" cy="385" r="108" />
+        <path d="M630 218V492" />
+        {/* m */}
+        <path d="M740 492V345A95.5 95.5 0 0 1 931 345V492M931 345A95.5 95.5 0 0 1 1122 345V492" />
+        {/* i */}
+        <path d="M1236 218V492" />
+        {/* n, ligado ao bojo do y */}
+        <path d="M1336 492V345A95.5 95.5 0 0 1 1527 345V365A95 95 0 0 0 1622 460H1717" />
       </g>
-      <circle cx="149" cy="9" r="4.5" fill="currentColor" />
-      <circle cx="26" cy="27" r="4.5" className="fill-signal" />
-      <path d="M203 23v44q0 11-11 11" className="stroke-signal" />
+      <circle cx="1236" cy="137" r="38" fill="currentColor" />
+      <circle cx="297" cy="250" r="36" className="fill-signal" />
+      {/* perna do y */}
+      <path d="M1717 218V560A95 95 0 0 1 1622 655H1575" className="stroke-signal" />
     </svg>
   );
 }
@@ -152,6 +158,10 @@ const TOM: Record<string, "ok" | "warn" | "danger" | "neutral"> = {
   contatado: "warn",
   atrasado: "danger",
   cancelado: "danger",
+  // Prévia de importação.
+  pronta: "ok",
+  duplicado: "warn",
+  erro: "danger",
 };
 
 const TOM_CLASSE = {

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { ActionForm } from "@/components/action-form";
 import { Dados, Field, Grid } from "@/components/fields";
+import { LinkExterno } from "@/components/link-externo";
 import { ItemConfirmar, Menu, itemMenu } from "@/components/menu";
 import { Painel } from "@/components/painel";
 import { Abas, Num, PageHeader, Resumo, Secao, Status, Tabela, Vazio, botao } from "@/components/ui";
@@ -131,6 +132,10 @@ function VisaoGeral({ l }: { l: LojistaCompleto }) {
               ["E-mail", l.email],
               ["Telefone", l.telefone ? <Num>{l.telefone}</Num> : null],
               ["WhatsApp", l.whatsapp ? <Num>{l.whatsapp}</Num> : null],
+              ["Site", <LinkExterno key="site" valor={l.site} />],
+              ["Instagram", <LinkExterno key="ig" valor={l.instagram} base="https://instagram.com/" />],
+              ["Facebook", <LinkExterno key="fb" valor={l.facebook} base="https://facebook.com/" />],
+              ["TikTok", <LinkExterno key="tt" valor={l.tiktok} base="https://tiktok.com/@" />],
               ["Endereço", endereco || null],
               [
                 "Coordenadas",

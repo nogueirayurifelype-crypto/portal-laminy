@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { signIn } from "@/auth";
+import { ACESSO_TESTE, signIn } from "@/auth";
 import { Wordmark, botao } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Entrar" };
@@ -24,6 +24,13 @@ async function entrar(formData: FormData) {
   await signIn("google", { redirectTo: typeof destino === "string" && destino ? destino : "/" });
 }
 
+async function entrarTeste(formData: FormData) {
+  "use server";
+  if (!ACESSO_TESTE) return;
+  const destino = formData.get("callbackUrl");
+  await signIn("teste", { redirectTo: typeof destino === "string" && destino ? destino : "/" });
+}
+
 async function LoginForm({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const erro = primeiro(params.error);
@@ -40,6 +47,14 @@ async function LoginForm({ searchParams }: { searchParams: SearchParams }) {
           Entrar com Google
         </button>
       </form>
+      {ACESSO_TESTE && (
+        <form action={entrarTeste}>
+          <input type="hidden" name="callbackUrl" value={primeiro(params.callbackUrl) ?? "/"} />
+          <button type="submit" className={`${botao.secundario} w-full`}>
+            Acesso de teste (só no dev)
+          </button>
+        </form>
+      )}
     </>
   );
 }

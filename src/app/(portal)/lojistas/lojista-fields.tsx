@@ -1,4 +1,5 @@
 import { Field, Grid, Select, TextArea } from "@/components/fields";
+import { EnderecoFields } from "@/components/endereco-fields";
 import { Grupo } from "@/components/ui";
 import { LOJISTA_STATUS, type Lojista } from "@/db/schema";
 
@@ -27,17 +28,16 @@ export function LojistaFields({ lojista }: { lojista?: Lojista }) {
           <Field name="whatsapp" label="WhatsApp" type="tel" defaultValue={l?.whatsapp} />
         </Grid>
       </Grupo>
-      <Grupo titulo="Endereço">
+      <Grupo titulo="Site e redes sociais">
         <Grid>
-          <Field name="cep" label="CEP" inputMode="numeric" defaultValue={l?.cep} />
-          <Field name="logradouro" label="Logradouro" defaultValue={l?.logradouro} />
-          <Field name="numero" label="Número" defaultValue={l?.numero} />
-          <Field name="bairro" label="Bairro" defaultValue={l?.bairro} />
-          <Field name="cidade" label="Cidade" defaultValue={l?.cidade} />
-          <Field name="uf" label="UF" defaultValue={l?.uf} />
-          <Field name="latitude" label="Latitude" inputMode="decimal" defaultValue={l?.latitude} />
-          <Field name="longitude" label="Longitude" inputMode="decimal" defaultValue={l?.longitude} />
+          <Field name="site" label="Site" inputMode="text" placeholder="https://" defaultValue={l?.site} />
+          <Field name="instagram" label="Instagram" placeholder="@usuario ou link" defaultValue={l?.instagram} />
+          <Field name="facebook" label="Facebook" placeholder="link da página" defaultValue={l?.facebook} />
+          <Field name="tiktok" label="TikTok" placeholder="@usuario ou link" defaultValue={l?.tiktok} />
         </Grid>
+      </Grupo>
+      <Grupo titulo="Endereço">
+        <EnderecoFields valor={l} />
       </Grupo>
       <Grupo titulo="Observações">
         <TextArea name="observacoes" label="Observações internas" defaultValue={l?.observacoes} />

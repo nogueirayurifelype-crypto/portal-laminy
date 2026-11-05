@@ -2,22 +2,27 @@ import { count, desc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Abas, Card, Chips, Num, PageHeader, Status, Tabela, Vazio, botao } from "@/components/ui";
+import { Abas, Card, Chips, Num, PageHeader, Tabela, Vazio, botao } from "@/components/ui";
+import { MenuPlanilha } from "@/components/menu-planilha";
 import { db } from "@/db";
 import { LEAD_STATUS, campanhas, leads } from "@/db/schema";
 import { label } from "@/lib/format";
 import { requireSession } from "@/lib/session";
 import { hrefCom, param } from "@/lib/url";
 
+import { StatusCampanhaSelect } from "./status-campanha-select";
 import { LeadsTable } from "./leads-table";
 
 export const metadata: Metadata = { title: "Campanhas e leads" };
 
+const LEADS_HREF = "/campanhas?aba=leads";
+
 export default async function CampanhasPage({ searchParams }: PageProps<"/campanhas">) {
   await requireSession();
   const sp = await searchParams;
-  const aba = param(sp.aba) === "campanhas" ? "campanhas" : "leads";
   const status = LEAD_STATUS.find((s) => s === param(sp.status));
+  // Campanhas é a aba padrão; filtrar por status só faz sentido na lista de leads.
+  const aba = param(sp.aba) === "leads" || status ? "leads" : "campanhas";
 
   const [totalCampanhas] = await db.select({ total: count() }).from(campanhas);
 
@@ -29,9 +34,11 @@ export default async function CampanhasPage({ searchParams }: PageProps<"/campan
       >
         {aba === "leads" ? (
           <>
-            <Link href="/campanhas/nova" className={botao.secundario}>
-              + Nova campanha
-            </Link>
+            {/* Exportar respeita o filtro de status atual. */}
+            <MenuPlanilha
+              importarHref="/campanhas/leads/importar"
+              exportarHref={hrefCom("/campanhas/leads/exportar", { status })}
+            />
             <Link href="/campanhas/leads/novo" className={botao.primario}>
               + Novo lead
             </Link>
@@ -50,13 +57,8 @@ export default async function CampanhasPage({ searchParams }: PageProps<"/campan
 
       <Abas
         itens={[
-          { href: "/campanhas", label: "Leads", ativo: aba === "leads" },
-          {
-            href: "/campanhas?aba=campanhas",
-            label: "Campanhas",
-            ativo: aba === "campanhas",
-            contagem: totalCampanhas.total,
-          },
+          { href: "/campanhas", label: "Campanhas", ativo: aba === "campanhas", contagem: totalCampanhas.total },
+          { href: LEADS_HREF, label: "Leads", ativo: aba === "leads" },
         ]}
       />
 
@@ -83,9 +85,9 @@ async function Leads({ status }: { status: (typeof LEAD_STATUS)[number] | undefi
       <Chips
         rotulo="Filtrar leads por status"
         itens={[
-          { href: "/campanhas", label: "Todos", ativo: !status, contagem: total },
+          { href: LEADS_HREF, label: "Todos", ativo: !status, contagem: total },
           ...LEAD_STATUS.map((s) => ({
-            href: hrefCom("/campanhas", { status: s }),
+            href: hrefCom("/campanhas", { aba: "leads", status: s }),
             label: label(s),
             ativo: status === s,
             contagem: contagem(s),
@@ -139,6 +141,7 @@ async function Campanhas() {
               <th>Região</th>
               <th>Status</th>
               <th className="text-right">Leads</th>
+              <th aria-label="Ações" />
             </tr>
           </thead>
           <tbody>
@@ -150,10 +153,13 @@ async function Campanhas() {
                 <td>{c.nicho ?? "—"}</td>
                 <td>{c.regiao ?? "—"}</td>
                 <td>
-                  <Status valor={c.status} />
+                  <StatusCampanhaSelect id={c.id} nome={c.nome} status={c.status} />
                 </td>
                 <td className="text-right">
                   <Num>{c.leads}</Num>
+                </td>
+                <td className="text-right whitespace-nowrap">
+                  <Link href={`/campanhas/${c.id}?aba=configuracoes`}>Editar</Link>
                 </td>
               </tr>
             ))}

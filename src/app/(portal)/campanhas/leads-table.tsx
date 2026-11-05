@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Num, Status, Tabela, Vazio, botao } from "@/components/ui";
 
 import { aprovarLeadEAbrir } from "./actions";
+import { StatusLeadSelect } from "./status-lead-select";
 
 export type LeadLinha = {
   id: string;
@@ -63,7 +64,12 @@ export function LeadsTable({
             <td>{l.cidade ?? "—"}</td>
             {mostrarCampanha && <td>{l.campanha?.nome ?? "—"}</td>}
             <td>
-              <Status valor={l.status} />
+              {/* Aprovado já virou lojista: fica só o rótulo (desfazer é na ficha do lead). */}
+              {l.lojistaId || l.status === "aprovado" ? (
+                <Status valor={l.status} />
+              ) : (
+                <StatusLeadSelect id={l.id} nome={l.nome} status={l.status} />
+              )}
             </td>
             <td>
               <div className="flex justify-end">
