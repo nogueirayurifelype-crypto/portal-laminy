@@ -2,6 +2,7 @@ import { Field, Grid, Select, TextArea } from "@/components/fields";
 import { EnderecoFields } from "@/components/endereco-fields";
 import { Grupo } from "@/components/ui";
 import { LOJISTA_STATUS, type Lojista } from "@/db/schema";
+import { SIM_NAO, valorSimNao } from "@/lib/format";
 
 export function LojistaFields({ lojista }: { lojista?: Lojista }) {
   const l = lojista;
@@ -30,6 +31,13 @@ export function LojistaFields({ lojista }: { lojista?: Lojista }) {
       </Grupo>
       <Grupo titulo="Site e redes sociais">
         <Grid>
+          <Select
+            name="temSite"
+            label="Tem site?"
+            options={SIM_NAO}
+            vazio="Não informado"
+            defaultValue={valorSimNao(l?.temSite)}
+          />
           <Field name="site" label="Site" inputMode="text" placeholder="https://" defaultValue={l?.site} />
           <Field name="instagram" label="Instagram" placeholder="@usuario ou link" defaultValue={l?.instagram} />
           <Field name="facebook" label="Facebook" placeholder="link da página" defaultValue={l?.facebook} />

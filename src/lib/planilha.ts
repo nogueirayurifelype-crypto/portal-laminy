@@ -13,6 +13,12 @@ export type Coluna<K extends string> = {
   cabecalho: string;
   /** Outros nomes aceitos na importação. */
   aceita?: string[];
+  /** Sem esta coluna preenchida a linha é recusada. */
+  obrigatoria?: boolean;
+  /** Como preencher (mostrado na tela de importação). */
+  descricao?: string;
+  /** Valores das duas linhas de exemplo do modelo. */
+  exemplos?: readonly [string, string];
 };
 
 export type Registro<K extends string> = { linha: number; dados: Record<K, string> };
@@ -108,4 +114,9 @@ export function formatTelefone(texto: string | null | undefined): string {
   if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
   return texto ?? "";
+}
+
+/** As duas linhas de exemplo do modelo, na ordem das colunas. */
+export function linhasExemplo(colunas: readonly Coluna<string>[]): string[][] {
+  return [0, 1].map((i) => colunas.map((c) => c.exemplos?.[i] ?? ""));
 }

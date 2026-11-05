@@ -132,6 +132,7 @@ function VisaoGeral({ l }: { l: LojistaCompleto }) {
               ["E-mail", l.email],
               ["Telefone", l.telefone ? <Num>{l.telefone}</Num> : null],
               ["WhatsApp", l.whatsapp ? <Num>{l.whatsapp}</Num> : null],
+              ["Tem site", l.temSite == null ? null : l.temSite ? "Sim" : "Não"],
               ["Site", <LinkExterno key="site" valor={l.site} />],
               ["Instagram", <LinkExterno key="ig" valor={l.instagram} base="https://instagram.com/" />],
               ["Facebook", <LinkExterno key="fb" valor={l.facebook} base="https://facebook.com/" />],

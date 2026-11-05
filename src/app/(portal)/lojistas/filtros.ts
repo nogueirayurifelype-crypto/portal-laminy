@@ -1,9 +1,12 @@
-import { and, asc, desc, eq, ilike, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, ne, or } from "drizzle-orm";
 
 import { LOJISTA_STATUS, lojistas } from "@/db/schema";
-import { param } from "@/lib/url";
+import { param, termosBusca } from "@/lib/url";
 
-// Filtros da lista de lojistas, lidos da URL. Usados pela página e pela exportação.
+// Filtros da lista de lojistas, lidos da URL. Mesmo formato dos de leads; usados pela página e pela exportação.
+
+/** Fica fora de "Todos"; aparece só ao filtrar por ele (equivale ao lead descartado). */
+export const LOJISTA_OCULTO = "cancelado";
 
 export const ORDENS = {
   recentes: { label: "Mais recentes", por: desc(lojistas.createdAt) },
@@ -21,8 +24,7 @@ export function filtrosLojistas(sp: Busca) {
   // Vindo do Mapa: só quem ainda não tem latitude/longitude.
   const semCoordenadas = param(sp.coordenadas) === "sem";
 
-  const termo = `%${busca.replace(/[%_\\]/g, "\\$&")}%`;
-  const digitos = busca.replace(/\D/g, "");
+  const { termo, digitos } = termosBusca(busca);
   const filtroBusca = busca
     ? or(
         ilike(lojistas.nome, termo),
@@ -34,17 +36,20 @@ export function filtrosLojistas(sp: Busca) {
       )
     : undefined;
 
+  // Tudo menos o status: base das contagens das pílulas.
+  const semStatus = and(
+    filtroBusca,
+    semCoordenadas ? or(isNull(lojistas.latitude), isNull(lojistas.longitude)) : undefined,
+  );
+
   return {
     busca,
     status,
     ordem,
     semCoordenadas,
     filtrando: Boolean(busca || status || semCoordenadas),
-    where: and(
-      filtroBusca,
-      status ? eq(lojistas.status, status) : undefined,
-      semCoordenadas ? or(isNull(lojistas.latitude), isNull(lojistas.longitude)) : undefined,
-    ),
+    semStatus,
+    where: and(semStatus, status ? eq(lojistas.status, status) : ne(lojistas.status, LOJISTA_OCULTO)),
     orderBy: ORDENS[ordem].por,
   };
 }

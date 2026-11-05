@@ -4,11 +4,19 @@ import { useState, useTransition } from "react";
 
 import { label } from "@/lib/format";
 
-import { alterarStatusLead } from "./actions";
-import { LEAD_STATUS_EDITAVEIS } from "./constants";
-
-/** Troca o status do lead direto na linha da tabela, sem abrir a ficha. */
-export function StatusLeadSelect({ id, nome, status }: { id: string; nome: string; status: string }) {
+/** Troca o status direto na linha da tabela (leads e lojistas), sem abrir a ficha. */
+export function StatusSelect({
+  nome,
+  status,
+  opcoes,
+  alterar,
+}: {
+  nome: string;
+  status: string;
+  opcoes: readonly string[];
+  /** Server action já ligada ao registro (ex.: `alterarStatusLead.bind(null, id)`). */
+  alterar: (status: string) => Promise<void>;
+}) {
   const [valor, setValor] = useState(status);
   const [erro, setErro] = useState(false);
   const [pendente, iniciar] = useTransition();
@@ -27,7 +35,7 @@ export function StatusLeadSelect({ id, nome, status }: { id: string; nome: strin
         setErro(false);
         iniciar(async () => {
           try {
-            await alterarStatusLead(id, novo);
+            await alterar(novo);
           } catch {
             setValor(anterior);
             setErro(true);
@@ -35,7 +43,7 @@ export function StatusLeadSelect({ id, nome, status }: { id: string; nome: strin
         });
       }}
     >
-      {LEAD_STATUS_EDITAVEIS.map((s) => (
+      {opcoes.map((s) => (
         <option key={s} value={s}>
           {label(s)}
         </option>

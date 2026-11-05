@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/db";
+import { reverterLojistaParaLeadNoBanco } from "@/db/aprovar-lead";
 import { LOJISTA_STATUS, lojistas, responsaveis } from "@/db/schema";
 import { type ImportState, type LinhaPrevia, lerPlanilha, statusDaPlanilha } from "@/lib/planilha";
 import { requireSession } from "@/lib/session";
@@ -18,6 +19,9 @@ import {
   erroDeValidacao,
   fromFormData,
   textoObrigatorio,
+  inferirTemSite,
+  simNaoOpcional,
+  siteCoerente,
   textoOpcional,
   ufOpcional,
   uuid,
@@ -32,6 +36,7 @@ const lojistaSchema = z.object({
   email: emailOpcional,
   telefone: textoOpcional,
   whatsapp: textoOpcional,
+  temSite: simNaoOpcional,
   site: textoOpcional,
   instagram: textoOpcional,
   facebook: textoOpcional,
@@ -47,7 +52,9 @@ const lojistaSchema = z.object({
   nicho: textoOpcional,
   status: enumDe(LOJISTA_STATUS, "Status"),
   observacoes: textoOpcional,
-});
+})
+  .refine(siteCoerente.fn, siteCoerente.params)
+  .transform(inferirTemSite);
 
 function erroDeBanco(e: unknown): ActionState {
   // 23505 = unique_violation (ex.: CNPJ repetido)
@@ -109,6 +116,31 @@ export async function atualizarLojista(
   }
   revalidatePath("/lojistas");
   redirect(`/lojistas/${lojistaId}`);
+}
+
+/** Troca o status do lojista direto da lista. */
+export async function alterarStatusLojista(id: string, status: string) {
+  await requireSession();
+  const lojistaId = uuid.parse(id);
+  const novo = enumDe(LOJISTA_STATUS, "Status").parse(status);
+  await db.update(lojistas).set({ status: novo }).where(eq(lojistas.id, lojistaId));
+  revalidatePath("/lojistas");
+  revalidatePath(`/lojistas/${lojistaId}`);
+  revalidatePath("/");
+}
+
+/** Desfaz um lojista criado por engano: ele volta a ser lead (ver `reverterLojistaParaLeadNoBanco`). */
+export async function voltarLojistaParaLead(id: string) {
+  await requireSession();
+  const lojistaId = uuid.parse(id);
+  const r = await reverterLojistaParaLeadNoBanco(db, lojistaId);
+  if (!r.desfeito) redirect(`/lojistas?erro=${r.motivo}`);
+  revalidatePath("/lojistas");
+  revalidatePath("/campanhas");
+  if (r.campanhaId) revalidatePath(`/campanhas/${r.campanhaId}`);
+  revalidatePath("/mapa");
+  revalidatePath("/");
+  redirect(`/campanhas/leads/${r.leadId}`);
 }
 
 const responsavelSchema = z.object({

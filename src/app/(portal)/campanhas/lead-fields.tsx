@@ -2,6 +2,7 @@ import { Field, Grid, Select, TextArea } from "@/components/fields";
 import { EnderecoFields } from "@/components/endereco-fields";
 import { Grupo, Status } from "@/components/ui";
 import type { Lead } from "@/db/schema";
+import { SIM_NAO, valorSimNao } from "@/lib/format";
 
 import { LEAD_STATUS_EDITAVEIS } from "./constants";
 
@@ -31,6 +32,13 @@ export function LeadFields({
       </Grupo>
       <Grupo titulo="Site e redes sociais">
         <Grid>
+          <Select
+            name="temSite"
+            label="Tem site?"
+            options={SIM_NAO}
+            vazio="Não informado"
+            defaultValue={valorSimNao(lead?.temSite)}
+          />
           <Field name="site" label="Site" placeholder="https://" defaultValue={lead?.site} />
           <Field name="instagram" label="Instagram" placeholder="@usuario ou link" defaultValue={lead?.instagram} />
           <Field name="facebook" label="Facebook" placeholder="link da página" defaultValue={lead?.facebook} />

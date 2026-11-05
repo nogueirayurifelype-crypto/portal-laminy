@@ -1,28 +1,32 @@
-import { count, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Abas, Card, Chips, Num, PageHeader, Tabela, Vazio, botao } from "@/components/ui";
+import { FiltroSelect } from "@/components/filtro-select";
+import { FiltroStatus } from "@/components/filtro-status";
+import { Abas, BarraBusca, Card, Num, PageHeader, Tabela, Vazio, botao } from "@/components/ui";
 import { MenuPlanilha } from "@/components/menu-planilha";
 import { db } from "@/db";
 import { LEAD_STATUS, campanhas, leads } from "@/db/schema";
-import { label } from "@/lib/format";
 import { requireSession } from "@/lib/session";
 import { hrefCom, param } from "@/lib/url";
 
-import { StatusCampanhaSelect } from "./status-campanha-select";
+import { LEAD_OCULTO, ORDENS_LEADS, filtrosLeads } from "./filtros";
 import { LeadsTable } from "./leads-table";
+import { StatusCampanhaSelect } from "./status-campanha-select";
 
 export const metadata: Metadata = { title: "Campanhas e leads" };
 
 const LEADS_HREF = "/campanhas?aba=leads";
 
+type Filtros = ReturnType<typeof filtrosLeads>;
+
 export default async function CampanhasPage({ searchParams }: PageProps<"/campanhas">) {
   await requireSession();
   const sp = await searchParams;
-  const status = LEAD_STATUS.find((s) => s === param(sp.status));
-  // Campanhas é a aba padrão; filtrar por status só faz sentido na lista de leads.
-  const aba = param(sp.aba) === "leads" || status ? "leads" : "campanhas";
+  const filtros = filtrosLeads(sp);
+  // Campanhas é a aba padrão; os filtros de leads só valem na aba de leads.
+  const aba = param(sp.aba) === "leads" || filtros.status ? "leads" : "campanhas";
 
   const [totalCampanhas] = await db.select({ total: count() }).from(campanhas);
 
@@ -34,10 +38,10 @@ export default async function CampanhasPage({ searchParams }: PageProps<"/campan
       >
         {aba === "leads" ? (
           <>
-            {/* Exportar respeita o filtro de status atual. */}
+            {/* Exportar respeita os filtros atuais. */}
             <MenuPlanilha
               importarHref="/campanhas/leads/importar"
-              exportarHref={hrefCom("/campanhas/leads/exportar", { status })}
+              exportarHref={hrefCom("/campanhas/leads/exportar", parametros(filtros))}
             />
             <Link href="/campanhas/leads/novo" className={botao.primario}>
               + Novo lead
@@ -62,45 +66,108 @@ export default async function CampanhasPage({ searchParams }: PageProps<"/campan
         ]}
       />
 
-      {aba === "leads" ? <Leads status={status} /> : <Campanhas />}
+      {aba === "leads" ? <Leads filtros={filtros} /> : <Campanhas />}
     </div>
   );
 }
 
-async function Leads({ status }: { status: (typeof LEAD_STATUS)[number] | undefined }) {
-  const [porStatus, lista] = await Promise.all([
-    db.select({ status: leads.status, total: count() }).from(leads).groupBy(leads.status),
-    db.query.leads.findMany({
-      where: status ? eq(leads.status, status) : undefined,
-      orderBy: [desc(leads.createdAt)],
-      limit: 200,
-      with: { campanha: { columns: { nome: true } } },
-    }),
+/** Filtros atuais como parâmetros de URL (sem os valores padrão). */
+function parametros(f: Filtros, mudar: { status?: string } = {}) {
+  return {
+    q: f.busca,
+    status: "status" in mudar ? mudar.status : f.status,
+    campanha: f.campanha,
+    ordem: f.ordem === "recentes" ? null : f.ordem,
+  };
+}
+
+async function Leads({ filtros }: { filtros: Filtros }) {
+  const { busca, status, campanha, ordem, filtrando, semStatus, where, orderBy } = filtros;
+  const [porStatus, lista, listaCampanhas] = await Promise.all([
+    db.select({ status: leads.status, total: count() }).from(leads).where(semStatus).groupBy(leads.status),
+    db
+      .select({
+        id: leads.id,
+        nome: leads.nome,
+        empresa: leads.empresa,
+        cnpj: leads.cnpj,
+        telefone: leads.telefone,
+        cidade: leads.cidade,
+        uf: leads.uf,
+        nicho: leads.nicho,
+        status: leads.status,
+        lojistaId: leads.lojistaId,
+      })
+      .from(leads)
+      .where(where)
+      .orderBy(orderBy)
+      .limit(200),
+    db.select({ id: campanhas.id, nome: campanhas.nome }).from(campanhas).orderBy(asc(campanhas.nome)),
   ]);
-  const contagem = (s: string) => porStatus.find((p) => p.status === s)?.total ?? 0;
-  const total = porStatus.reduce((t, p) => t + p.total, 0);
+  const existeAlgum = porStatus.some((p) => p.total > 0);
 
   return (
     <div className="flex flex-col gap-3">
-      <Chips
+      <BarraBusca
+        action="/campanhas"
+        busca={busca}
+        rotulo="Buscar leads"
+        placeholder="Buscar por nome, empresa, CNPJ, cidade, nicho…"
+        filtros={
+          <>
+            <input type="hidden" name="aba" value="leads" />
+            {status && <input type="hidden" name="status" value={status} />}
+            {listaCampanhas.length > 0 && (
+              <FiltroSelect
+                name="campanha"
+                rotulo="Filtrar por campanha"
+                valor={campanha ?? ""}
+                opcoes={[{ value: "", label: "Todas as campanhas" }, ...listaCampanhas.map((c) => ({ value: c.id, label: c.nome }))]}
+              />
+            )}
+            <FiltroSelect
+              name="ordem"
+              rotulo="Ordenar por"
+              valor={ordem}
+              opcoes={Object.entries(ORDENS_LEADS).map(([value, o]) => ({ value, label: o.label }))}
+            />
+          </>
+        }
+      />
+      <FiltroStatus
         rotulo="Filtrar leads por status"
-        itens={[
-          { href: LEADS_HREF, label: "Todos", ativo: !status, contagem: total },
-          ...LEAD_STATUS.map((s) => ({
-            href: hrefCom("/campanhas", { aba: "leads", status: s }),
-            label: label(s),
-            ativo: status === s,
-            contagem: contagem(s),
-          })),
-        ]}
+        status={status}
+        opcoes={LEAD_STATUS}
+        oculto={LEAD_OCULTO}
+        contagens={porStatus}
+        href={(s) => hrefCom("/campanhas", { aba: "leads", ...parametros(filtros, { status: s }) })}
       />
       <Card className="overflow-hidden">
-        {status && lista.length === 0 ? (
-          <Vazio>Nenhum lead com status “{label(status)}”.</Vazio>
+        {lista.length === 0 && (filtrando || existeAlgum) ? (
+          <Vazio
+            acao={
+              <Link href={LEADS_HREF} className={botao.secundario}>
+                Limpar filtros
+              </Link>
+            }
+          >
+            {busca
+              ? `Nenhum lead encontrado para “${busca}”.`
+              : filtrando
+                ? "Nenhum lead com esses filtros."
+                : "Nenhum lead fora dos descartados. Veja em “Descartados”."}
+          </Vazio>
         ) : (
-          <LeadsTable leads={lista} mostrarCampanha novoHref="/campanhas/leads/novo" />
+          <LeadsTable leads={lista} novoHref="/campanhas/leads/novo" />
         )}
       </Card>
+      {lista.length > 0 && (
+        <p className="text-[13px] text-muted tabular-nums">
+          {lista.length === 1 ? "1 lead" : `${lista.length} leads`}
+          {busca && ` para “${busca}”`}
+          {!status && " · descartados ocultos"}
+        </p>
+      )}
     </div>
   );
 }

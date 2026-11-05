@@ -17,6 +17,29 @@ export const textoObrigatorio = (campo: string) =>
 
 export const emailOpcional = textoOpcional.pipe(z.email("E-mail inválido").nullable());
 
+/** Sim/não opcional: "sim"/"não"/"s"/"n"/"1"/"0"/"true"/"false"; "" -> null. */
+export const simNaoOpcional = textoOpcional
+  .transform((v) => {
+    if (v === null) return null;
+    const t = v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (["sim", "s", "1", "true", "tem", "yes", "y"].includes(t)) return true;
+    if (["nao", "n", "0", "false", "no"].includes(t)) return false;
+    return undefined;
+  })
+  .refine((v) => v !== undefined, { message: 'Use "sim" ou "não"' })
+  .transform((v) => v as boolean | null);
+
+type ComSite = { temSite: boolean | null; site: string | null };
+
+/** "Tem site = não" com um endereço de site preenchido é contradição. */
+export const siteCoerente = {
+  fn: (d: ComSite) => !(d.temSite === false && d.site),
+  params: { message: 'Marcado "não" em tem site, mas há um site preenchido', path: ["temSite"] },
+};
+
+/** Sem resposta em "tem site", mas com endereço preenchido: tem site. */
+export const inferirTemSite = <T extends ComSite>(d: T): T => ({ ...d, temSite: d.temSite ?? (d.site ? true : null) });
+
 /** Mantém só dígitos; "" -> null; opcionalmente exige um tamanho exato. */
 export const digitosOpcional = (campo: string, tamanho?: number) =>
   textoOpcional

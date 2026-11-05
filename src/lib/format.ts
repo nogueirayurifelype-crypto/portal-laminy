@@ -103,3 +103,11 @@ export function formatDia(valor: Date | null | undefined): string {
   if (!valor) return "—";
   return valor.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
+
+export const SIM_NAO = [
+  { value: "sim", label: "Sim" },
+  { value: "nao", label: "Não" },
+];
+
+/** boolean | null do banco -> valor do select "sim" / "nao" / "". */
+export const valorSimNao = (v: boolean | null | undefined) => (v == null ? "" : v ? "sim" : "nao");

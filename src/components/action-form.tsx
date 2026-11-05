@@ -23,6 +23,13 @@ type Props = {
   children: ReactNode;
 };
 
+const AVISO_SAIR = "Você tem alterações que ainda não foram salvas. Sair mesmo assim?";
+
+/** Valores atuais do formulário numa string, para saber se algo mudou desde que abriu. */
+function fotografar(form: HTMLFormElement) {
+  return JSON.stringify([...new FormData(form).entries()].filter(([, v]) => typeof v === "string"));
+}
+
 /**
  * Formulário ligado a uma server action que devolve ActionState.
  * Mostra o erro de validação e NÃO apaga o que foi digitado quando falha.
@@ -40,16 +47,57 @@ export function ActionForm({
   const [state, formAction, pending] = useActionState(action, {});
   const ref = useRef<HTMLFormElement>(null);
   const router = useRouter();
+  const inicial = useRef<string | null>(null);
+
+  // Avisa antes de sair com alterações não salvas: fechar/recarregar a aba e clicar em links.
+  // Ao voltar ao formulário o componente monta de novo, então ele sempre abre zerado.
+  useEffect(() => {
+    const form = ref.current;
+    if (!form) return;
+    inicial.current = fotografar(form);
+    const alterado = () => inicial.current !== null && fotografar(form) !== inicial.current;
+
+    const aoFechar = (e: BeforeUnloadEvent) => {
+      if (!alterado()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    const aoClicar = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || (a.target && a.target !== "_self") || a.hasAttribute("download")) return;
+      const destino = new URL(a.href, location.href);
+      if (destino.origin === location.origin && destino.pathname + destino.search === location.pathname + location.search) return;
+      if (destino.origin === location.origin && destino.hash && destino.pathname === location.pathname) return;
+      if (!alterado()) return;
+      if (!window.confirm(AVISO_SAIR)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener("beforeunload", aoFechar);
+    document.addEventListener("click", aoClicar, true);
+    return () => {
+      window.removeEventListener("beforeunload", aoFechar);
+      document.removeEventListener("click", aoClicar, true);
+    };
+  }, []);
 
   useEffect(() => {
     if (!state.ok) return;
-    if (resetOnSuccess) ref.current?.reset();
+    // Salvou: o que está na tela passa a ser o novo "ponto de partida" (nada a perder).
+    if (ref.current) inicial.current = fotografar(ref.current);
+    if (resetOnSuccess) {
+      ref.current?.reset();
+      if (ref.current) inicial.current = fotografar(ref.current);
+    }
     if (aoConcluir) router.replace(aoConcluir, { scroll: false });
   }, [state, resetOnSuccess, aoConcluir, router]);
 
   return (
     <form
       ref={ref}
+      autoComplete="off"
       className={className ?? "flex flex-col gap-5"}
       onSubmit={(e) => {
         e.preventDefault();

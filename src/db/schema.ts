@@ -66,6 +66,8 @@ export const lojistas = pgTable(
     email: text("email"),
     telefone: text("telefone"),
     whatsapp: text("whatsapp"),
+    // null = não informado; true/false = a loja tem (ou não) site próprio.
+    temSite: boolean("tem_site"),
     site: text("site"),
     instagram: text("instagram"),
     facebook: text("facebook"),
@@ -194,6 +196,8 @@ export const leads = pgTable(
     telefone: text("telefone"),
     whatsapp: text("whatsapp"),
     email: text("email"),
+    // null = não informado; true/false = a loja tem (ou não) site próprio.
+    temSite: boolean("tem_site"),
     site: text("site"),
     instagram: text("instagram"),
     facebook: text("facebook"),

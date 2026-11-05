@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 
 import type { DB } from "./index";
 import { contasFinanceiras, leads, lojistas, pagamentos, responsaveis } from "./schema";
@@ -44,6 +44,7 @@ export async function aprovarLeadNoBanco(executor: Executor, leadId: string) {
         email: lead.email,
         telefone: lead.telefone,
         whatsapp: lead.whatsapp,
+        temSite: lead.temSite,
         site: lead.site,
         instagram: lead.instagram,
         facebook: lead.facebook,
@@ -99,5 +100,68 @@ export async function desfazerAprovacaoNoBanco(executor: Executor, leadId: strin
     await tx.update(leads).set({ status: "qualificado", lojistaId: null }).where(eq(leads.id, leadId));
     await tx.delete(lojistas).where(eq(lojistas.id, lead.lojistaId));
     return { desfeito: true as const, campanhaId: lead.campanhaId };
+  });
+}
+
+/**
+ * Devolve o lojista à condição de lead, numa transação. Se o lojista veio de um lead, esse lead
+ * volta a `qualificado`; se foi cadastrado à mão, cria-se um lead novo (qualificado) com os mesmos
+ * dados. Em ambos os casos o lojista é excluído (responsáveis em cascata). Recusa se há conta ou
+ * pagamento: dado financeiro não deve sumir sem querer.
+ * Sem checagem de sessão: quem chama (a server action) é responsável por isso.
+ */
+export async function reverterLojistaParaLeadNoBanco(executor: Executor, lojistaId: string) {
+  return executor.transaction(async (tx) => {
+    const [lojista] = await tx.select().from(lojistas).where(eq(lojistas.id, lojistaId)).for("update");
+    if (!lojista) throw new Error("Lojista não encontrado.");
+
+    const [conta] = await tx.select({ id: contasFinanceiras.id }).from(contasFinanceiras).where(eq(contasFinanceiras.lojistaId, lojistaId)).limit(1);
+    const [pagamento] = await tx.select({ id: pagamentos.id }).from(pagamentos).where(eq(pagamentos.lojistaId, lojistaId)).limit(1);
+    if (conta || pagamento) return { desfeito: false as const, motivo: "financeiro" as const };
+
+    const [origem] = await tx.select({ id: leads.id, campanhaId: leads.campanhaId }).from(leads).where(eq(leads.lojistaId, lojistaId)).for("update");
+    if (origem) {
+      await tx.update(leads).set({ status: "qualificado", lojistaId: null }).where(eq(leads.id, origem.id));
+      await tx.delete(lojistas).where(eq(lojistas.id, lojistaId));
+      return { desfeito: true as const, leadId: origem.id, campanhaId: origem.campanhaId };
+    }
+
+    const [principal] = await tx
+      .select({ nome: responsaveis.nome })
+      .from(responsaveis)
+      .where(eq(responsaveis.lojistaId, lojistaId))
+      .orderBy(desc(responsaveis.principal), asc(responsaveis.createdAt))
+      .limit(1);
+
+    const [lead] = await tx
+      .insert(leads)
+      .values({
+        nome: principal?.nome ?? lojista.nome,
+        empresa: lojista.nome,
+        razaoSocial: lojista.razaoSocial,
+        cnpj: lojista.cnpj,
+        email: lojista.email,
+        telefone: lojista.telefone,
+        whatsapp: lojista.whatsapp,
+        temSite: lojista.temSite,
+        site: lojista.site,
+        instagram: lojista.instagram,
+        facebook: lojista.facebook,
+        tiktok: lojista.tiktok,
+        cep: lojista.cep,
+        logradouro: lojista.logradouro,
+        numero: lojista.numero,
+        bairro: lojista.bairro,
+        cidade: lojista.cidade,
+        uf: lojista.uf,
+        latitude: lojista.latitude,
+        longitude: lojista.longitude,
+        nicho: lojista.nicho,
+        status: "qualificado",
+        observacoes: lojista.observacoes,
+      })
+      .returning({ id: leads.id });
+    await tx.delete(lojistas).where(eq(lojistas.id, lojistaId));
+    return { desfeito: true as const, leadId: lead.id, campanhaId: null };
   });
 }

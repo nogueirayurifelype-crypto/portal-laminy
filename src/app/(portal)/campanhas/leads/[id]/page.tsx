@@ -14,7 +14,8 @@ import { uuid } from "@/lib/validation";
 
 import { Confirmar } from "@/components/confirmar";
 
-import { aprovarLeadEAbrir, desfazerAprovacao } from "../../actions";
+import { desfazerAprovacao } from "../../actions";
+import { AprovarLeadBotao } from "../../aprovar-lead-botao";
 
 export const metadata: Metadata = { title: "Lead" };
 
@@ -76,11 +77,7 @@ export default async function LeadPage({ params, searchParams }: PageProps<"/cam
           </>
         ) : (
           podeAprovar && (
-            <form action={aprovarLeadEAbrir.bind(null, lead.id)}>
-              <button type="submit" className={botao.primario}>
-                Aprovar e criar lojista
-              </button>
-            </form>
+            <AprovarLeadBotao leadId={lead.id} rotulo="Aprovar e criar lojista" variante="primario" />
           )
         )}
       </PageHeader>
@@ -117,6 +114,7 @@ export default async function LeadPage({ params, searchParams }: PageProps<"/cam
               ["E-mail", lead.email],
               ["Telefone", lead.telefone ? <Num>{lead.telefone}</Num> : null],
               ["WhatsApp", lead.whatsapp ? <Num>{lead.whatsapp}</Num> : null],
+              ["Tem site", lead.temSite == null ? null : lead.temSite ? "Sim" : "Não"],
               ["Site", <LinkExterno key="site" valor={lead.site} />],
               ["Instagram", <LinkExterno key="ig" valor={lead.instagram} base="https://instagram.com/" />],
               ["Facebook", <LinkExterno key="fb" valor={lead.facebook} base="https://facebook.com/" />],

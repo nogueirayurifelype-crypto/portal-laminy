@@ -10,3 +10,8 @@ export function hrefCom(path: string, params: Record<string, string | null | und
 export function param(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
+
+/** Termo de busca para `ilike` (curingas escapados) e só os dígitos, para CNPJ. */
+export function termosBusca(busca: string) {
+  return { termo: `%${busca.replace(/[%_\\]/g, "\\$&")}%`, digitos: busca.replace(/\D/g, "") };
+}

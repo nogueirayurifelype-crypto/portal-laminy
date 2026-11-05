@@ -20,6 +20,9 @@ import {
   erroDeValidacao,
   fromFormData,
   textoObrigatorio,
+  inferirTemSite,
+  simNaoOpcional,
+  siteCoerente,
   textoOpcional,
   ufOpcional,
   uuid,
@@ -98,6 +101,7 @@ const leadSchema = z.object({
   telefone: textoOpcional,
   whatsapp: textoOpcional,
   email: emailOpcional,
+  temSite: simNaoOpcional,
   site: textoOpcional,
   instagram: textoOpcional,
   facebook: textoOpcional,
@@ -114,7 +118,9 @@ const leadSchema = z.object({
   origem: textoOpcional,
   status: enumDe(LEAD_STATUS_EDITAVEIS, "Status"),
   observacoes: textoOpcional,
-});
+})
+  .refine(siteCoerente.fn, siteCoerente.params)
+  .transform(inferirTemSite);
 
 function revalidarLeads(campanhaId?: string | null) {
   revalidatePath("/campanhas");

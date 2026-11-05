@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ColunasPlanilha } from "@/components/colunas-planilha";
 import { ImportarPlanilha } from "@/components/importar-planilha";
 import { PageHeader } from "@/components/ui";
 import { requireSession } from "@/lib/session";
@@ -25,24 +26,7 @@ export default async function ImportarLojistasPage() {
         singular="lojista"
         plural="lojistas"
       />
-      <Colunas />
+      <ColunasPlanilha colunas={COLUNAS_LOJISTA} />
     </div>
-  );
-}
-
-function Colunas() {
-  return (
-    <section className="flex flex-col gap-2 text-[13px] text-muted">
-      <h2 className="text-sm text-black">Como preencher</h2>
-      <p>
-        Colunas aceitas: {COLUNAS_LOJISTA.map((c) => c.cabecalho).join(", ")}. Só “nome_fantasia” é obrigatória; a ordem
-        das colunas não importa e colunas desconhecidas são ignoradas.
-      </p>
-      <p>
-        status: ativo, em_contrato, inativo ou cancelado (vazio = em_contrato). cnpj com 14 dígitos e cep com 8, com ou
-        sem pontuação; no Excel, deixe essas colunas como texto para não perder zeros. Lojista com CNPJ já cadastrado é
-        ignorado.
-      </p>
-    </section>
   );
 }

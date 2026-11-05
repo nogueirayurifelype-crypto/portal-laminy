@@ -65,39 +65,46 @@ export function Menu({ rotulo, children }: { rotulo: string; children: ReactNode
   );
 }
 
-/** Item perigoso do menu: o primeiro clique pede confirmação, o segundo envia. */
+/** Item do menu em duas etapas: o primeiro clique pede confirmação, o segundo envia. */
 export function ItemConfirmar({
   action,
   rotulo,
   confirmar,
+  aviso,
+  tom = "perigo",
 }: {
   action: () => Promise<void>;
   rotulo: string;
+  /** Explica o que vai acontecer; aparece junto do botão de confirmação. */
+  aviso?: string;
   /** Texto do segundo clique (ex.: "Confirmar remoção"). */
   confirmar: string;
+  /** "perigo" (padrão) para remover/desfazer; "normal" para ações construtivas, como aprovar. */
+  tom?: "perigo" | "normal";
 }) {
   const [armado, setArmado] = useState(false);
   if (!armado)
     return (
-      <button type="button" data-manter-aberto className={`${itemMenu} text-danger`} onClick={() => setArmado(true)}>
+      <button type="button" data-manter-aberto className={`${itemMenu} ${tom === "perigo" ? "text-danger" : ""}`} onClick={() => setArmado(true)}>
         {rotulo}…
       </button>
     );
   return (
-    <form action={action}>
-      <Enviar>{confirmar}</Enviar>
+    <form action={action} data-manter-aberto>
+      {aviso && <p className="max-w-60 px-3 py-1.5 text-xs whitespace-normal text-muted">{aviso}</p>}
+      <Enviar tom={tom}>{confirmar}</Enviar>
     </form>
   );
 }
 
-function Enviar({ children }: { children: string }) {
+function Enviar({ children, tom }: { children: string; tom: "perigo" | "normal" }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       autoFocus
       disabled={pending}
-      className={`${itemMenu} bg-danger-bg font-medium text-danger hover:bg-danger-bg`}
+      className={`${itemMenu} font-medium ${tom === "perigo" ? "bg-danger-bg text-danger hover:bg-danger-bg" : "bg-mist"}`}
     >
       {pending ? "Aguarde…" : children}
     </button>
